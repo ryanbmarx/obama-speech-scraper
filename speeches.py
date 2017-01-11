@@ -50,6 +50,7 @@ def getRemarksPageContents(url):
 			search_obj = re.search('\d:\d\d\s\w.\w.|\d\d:\d\d\s\w.\w.', text_to_test)
 			if search_obj != None:
 				time_start = search_obj.group(0)
+				# time_start = datetime.strptime(time_start, 'I:%M%p')
 				break
 		
 		# The end time is preceded by "END"
@@ -67,9 +68,25 @@ def getRemarksPageContents(url):
 	ret_val = {
 		"place":place,
 		"time_start":time_start,
-		"time_finish":time_finish
+		"time_finish":time_finish,
+		"duration":getDuration(time_start,time_finish)
 	}
 	return ret_val
+
+def convertToDatetime(time_str):
+	# Sometimes the time strings are error messages or otherwise not compatible with strptime. 
+	#  We'll use this function to do that conversion or return a detectable -1
+	try:
+		return datetime.strptime(time_str.replace('.',""), '%I:%M %p')
+	except Exception:
+		return -1
+
+def getDuration(time1_str, time2_str):
+	# If we have two datetimes, then we should calculate the duration.
+	time1_dt = convertToDatetime(time1_str)
+	time2_dt = convertToDatetime(time2_str)
+	if (type(time1_dt) == datetime and type(time2_dt) == datetime):
+		return time2_dt - time1_dt
 
 def checkForSpeaker(headline, official):
 	"""
@@ -109,12 +126,13 @@ output = [{
 	"place":"Where were the remarks delivered",
 	"time_start":"When the remarks began",
 	"time_finish":"When the remarks finished",
+	"duration":"how long was the speech",
 	"text":"Link text/post headline"
 }]
 
 
 # CYCLE THROUGH ALL 471+ PAGES OF POSTS ON WH.GOV AND GRAB THE DESIRED ELEMENTS
-for i in range(4, 5):
+for i in range(0,500):
 	url = "{}{}".format(base_url, i)
 	page = urllib2.urlopen(url)
 	soup = BeautifulSoup(page.read(), "html5lib")
@@ -150,9 +168,9 @@ for i in range(4, 5):
 			"place":page_contents['place'].encode('utf-8'),
 			"time_start":page_contents['time_start'].encode('utf-8'),
 			"time_finish":page_contents['time_finish'].encode('utf-8'),
+			"duration":page_contents['duration'],
 			"text":text.encode('utf-8')
 		}
-		print(temp)
 		output.append(temp)
 
 
