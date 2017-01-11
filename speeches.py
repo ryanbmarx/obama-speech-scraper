@@ -94,10 +94,12 @@ def checkForSpeaker(headline, official):
 	will be used to determine if a referenced speech/remarks included Barack, Michelle and/or Joe Biden
 	"""
 
-	# These are the search terms used for each official. If one of them is present, then we will assume he/she was speaking
+	# These are the search terms used for each official. If one of them is present, 
+	# then we will assume he/she was speaking. This includes the weekly address (in english and spanish) which
+	# are assumed to be the prez.
 	keywords = {
 		"vpotus":['vice president', 'joe biden'],
-		"potus":['barack', 'barack obama', 'the president', 'president obama'],
+		"potus":['barack', 'barack obama', 'the president', 'president obama', 'weekly', 'SEMANAL'],
 		"flotus":['Michelle Obama', 'first lady', 'flotus'],
 		"jill":['Jill Biden']
 	}
@@ -132,7 +134,7 @@ output = [{
 
 
 # CYCLE THROUGH ALL 471+ PAGES OF POSTS ON WH.GOV AND GRAB THE DESIRED ELEMENTS
-for i in range(0,500):
+for i in range(0,5):
 	url = "{}{}".format(base_url, i)
 	page = urllib2.urlopen(url)
 	soup = BeautifulSoup(page.read(), "html5lib")
@@ -142,36 +144,42 @@ for i in range(0,500):
 	remarks = soup.find_all('div',{"class":"views-row"})
 	for remark in remarks:
 
+
 		link = "https://www.whitehouse.gov{}".format(remark('a')[0]['href'])
 		text = remark.find('h3',{"class":"field-content"})('a')[0].contents[0]
 		date = remark.find('span',{"class":"field-content"}).contents[0]
 		
-		# There are a few elements which must plucked from the actual remarks page. 
-		# Those will be contained in this dict
-		page_contents = getRemarksPageContents(link)
+		# This if statement will skip items in Spanish. They are duplicates, and we don't want to double count
+		if ("DECLARACIONES" in text.upper() or "MENSAJE SEMANAL" in text.upper()):
+			print (' not valid')
+		else:
+			# There are a few elements which must plucked from the actual remarks page. 
+			# Those will be contained in this dict
+			page_contents = getRemarksPageContents(link)
 
-		# Scan the headline for keywords to determine who was speaking. Could be some or all 
-		# of these people. 1 = (s)he spoke. Anything else means no.
-		potus = checkForSpeaker(text, 'potus')
-		vpotus = checkForSpeaker(text, 'vpotus')
-		flotus = checkForSpeaker(text, 'flotus')
-		jill_biden = checkForSpeaker(text, 'jill')
+			# Scan the headline for keywords to determine who was speaking. Could be some or all 
+			# of these people. 1 = (s)he spoke. Anything else means no.
+			potus = checkForSpeaker(text, 'potus')
+			vpotus = checkForSpeaker(text, 'vpotus')
+			flotus = checkForSpeaker(text, 'flotus')
+			jill_biden = checkForSpeaker(text, 'jill')
 
-		# The temporary object which gets pushed into the output.
-		temp = {
-			"date":date.encode('utf-8'),
-			"potus":potus,
-			"vpotus":vpotus,
-			"flotus":flotus,
-			"jill_biden":jill_biden,
-			"link":link.encode('utf-8'),
-			"place":page_contents['place'].encode('utf-8'),
-			"time_start":page_contents['time_start'].encode('utf-8'),
-			"time_finish":page_contents['time_finish'].encode('utf-8'),
-			"duration":page_contents['duration'],
-			"text":text.encode('utf-8')
-		}
-		output.append(temp)
+			# The temporary object which gets pushed into the output.
+			temp = {
+				"date":date.encode('utf-8'),
+				"potus":potus,
+				"vpotus":vpotus,
+				"flotus":flotus,
+				"jill_biden":jill_biden,
+				"link":link.encode('utf-8'),
+				"place":page_contents['place'].encode('utf-8'),
+				"time_start":page_contents['time_start'].encode('utf-8'),
+				"time_finish":page_contents['time_finish'].encode('utf-8'),
+				"duration":page_contents['duration'],
+				"text":text.encode('utf-8')
+			}
+			output.append(temp)
+			print('valid')
 
 
 # WRITE THE OUTPUT TO A CSV
